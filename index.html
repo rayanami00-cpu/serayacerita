@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>serayacerita - Selamat Datang</title>
     <link href="https://fonts.googleapis.com/css2?family=Berkshire+Swash&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Supabase JS Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -15,10 +16,13 @@
             color: #fff8eb;
             font-family: 'Plus Jakarta Sans', sans-serif;
             min-height: 100vh;
-            display: flex; justify-content: center; align-items: center; padding: 20px;
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            padding: 20px;
         }
         .wood-card {
-            background: rgba(43, 24, 16, 0.9);
+            background: rgba(43, 24, 16, 0.92);
             border: 2px solid #1a0f0a;
             border-radius: 12px;
             padding: 40px 30px;
@@ -35,7 +39,10 @@
             margin-bottom: 25px;
             text-transform: lowercase;
         }
-        .input-group { margin-bottom: 15px; }
+        .input-group { 
+            margin-bottom: 15px; 
+            position: relative;
+        }
         .input-group input {
             width: 100%;
             padding: 12px 18px;
@@ -49,6 +56,17 @@
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
         }
         .input-group input::placeholder { color: #d4b896; }
+        .toggle-password {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            font-size: 0.9rem;
+            user-select: none;
+            opacity: 0.7;
+        }
+        .toggle-password:hover { opacity: 1; }
         .btn-login {
             width: 100%;
             padding: 12px;
@@ -81,38 +99,63 @@
     <div class="wood-card">
         <h1 class="site-title">serayacerita</h1>
         <form id="adminForm">
-            <div class="input-group"><input type="email" id="email" placeholder="username/email" required></div>
-            <div class="input-group"><input type="password" id="password" placeholder="password" required></div>
+            <div class="input-group">
+                <input type="email" id="email" placeholder="email terdaftar" required autocomplete="email">
+            </div>
+            <div class="input-group">
+                <input type="password" id="password" placeholder="password" required autocomplete="current-password">
+                <span class="toggle-password" id="togglePassword">👁️</span>
+            </div>
             <button type="submit" id="btnLogin" class="btn-login">login admin</button>
         </form>
         <a href="home.html" id="btnViewer" class="btn-viewer">view mode (pembaca)</a>
     </div>
 
-   <script>
-    // URL dan Key Supabase Project Baru (serayacerita)
-    const SUPABASE_URL = "https://dtxzmilzgoengvthyhuk.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_e4Bo3GagYcYbKzW9giZHSg_9kupUSA4";
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-</script>
+    <script>
+        // Kredensial Supabase Project serayacerita
+        const SUPABASE_URL = "https://dtxzmilzgoengvthyhuk.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_e4Bo3GagYcYbKzW9giZHSg_9kupUSA4";
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // Fitur Toggle Intip Password
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+
+        togglePassword.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            this.textContent = type === 'password' ? '👁️' : '🙈';
+        });
+
+        // Logika Login Admin
         document.getElementById('adminForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
+            
+            const emailInput = document.getElementById('email').value.trim();
+            const passwordInputVal = document.getElementById('password').value;
             const btn = document.getElementById('btnLogin');
 
             btn.disabled = true;
             btn.innerText = "memproses...";
 
-            const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+            try {
+                const { data, error } = await _supabase.auth.signInWithPassword({
+                    email: emailInput,
+                    password: passwordInputVal
+                });
 
-            if (error) {
-                alert("Login gagal: " + error.message);
+                if (error) {
+                    alert("Login gagal: " + error.message);
+                    btn.disabled = false;
+                    btn.innerText = "login admin";
+                } else {
+                    localStorage.setItem('role', 'admin');
+                    window.location.href = "home.html";
+                }
+            } catch (err) {
+                alert("Terjadi kesalahan koneksi: " + err.message);
                 btn.disabled = false;
                 btn.innerText = "login admin";
-            } else {
-                localStorage.setItem('role', 'admin');
-                window.location.href = "home.html";
             }
         });
 
