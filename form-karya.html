@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>serayacerita - Form Karya</title>
+    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Berkshire+Swash&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: #2a160a;
+            background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png');
+            background-repeat: repeat;
+            color: #fff8eb;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh; padding: 20px 15px; display: flex; justify-content: center;
+        }
+        .container { width: 100%; max-width: 500px; }
+        .site-title {
+            font-family: 'Berkshire Swash', cursive; font-size: 2.2rem; color: #fff8eb; text-align: center; margin-bottom: 20px; text-transform: lowercase;
+        }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 0.85rem; color: #d4b896; margin-bottom: 5px; }
+        .form-group input {
+            width: 100%; padding: 10px 14px; border-radius: 8px;
+            border: 1px solid #784822; background: #3b2010; color: #fff8eb; outline: none;
+        }
+        .cover-preview {
+            width: 100%; height: 180px; border-radius: 8px; border: 2px dashed #784822;
+            background-color: rgba(59, 32, 16, 0.5); display: flex; justify-content: center;
+            align-items: center; color: #d4b896; cursor: pointer; background-size: cover; background-position: center;
+        }
+        .btn-action {
+            width: 100%; padding: 12px; border-radius: 20px; border: 1px solid #8c532b;
+            background: #784822; color: #fff8eb; font-weight: 700; cursor: pointer; margin-top: 15px;
+        }
+        .btn-delete { background: #8b0000; border-color: #ff4d4d; margin-top: 10px; }
+        .btn-back { display: block; text-align: center; color: #d4b896; text-decoration: none; margin-top: 15px; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="site-title">serayacerita</h1>
+
+        <div class="form-group">
+            <label>Cover Karya</label>
+            <label for="coverInput" class="cover-preview" id="coverBox"><span>+ Tambah Cover</span></label>
+            <input type="file" id="coverInput" accept="image/*" style="display: none;">
+        </div>
+
+        <div class="form-group">
+            <label>Judul Karya</label>
+            <input type="text" id="judulInput" placeholder="Masukkan Judul...">
+        </div>
+
+        <div class="form-group">
+            <label>Impor File Naskah (.docx)</label>
+            <input type="file" id="docxInput" accept=".docx">
+        </div>
+
+        <div class="form-group">
+            <label>Isi Cerita</label>
+            <textarea id="editorContent"></textarea>
+        </div>
+
+        <button id="btnSave" class="btn-action">Simpan & Publikasikan</button>
+        <button id="btnDelete" class="btn-action btn-delete" style="display: none;">Hapus Karya</button>
+        <a href="home.html" class="btn-back">← Batal</a>
+    </div>
+
+    <script>
+    // URL dan Key Supabase Project Baru (serayacerita)
+    const SUPABASE_URL = "https://dtxzmilzgoengvthyhuk.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_e4Bo3GagYcYbKzW9giZHSg_9kupUSA4";
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    tinymce.init({
+        selector: '#editorContent', height: 350, menubar: false, plugins: 'lists link',
+        toolbar: 'undo redo | bold italic underline | alignleft aligncenter alignright alignjustify | bullist numlist',
+        skin: 'oxide-dark', content_css: 'dark'
+    });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode');
+    const karyaId = urlParams.get('id');
+
+    let currentCoverBase64 = "";
+    let currentUser = null;
+
+    async function init() {
+        const { data: { user } } = await _supabase.auth.getUser();
+        currentUser = user;
+
+        if (mode === 'edit' && karyaId) {
+            document.getElementById('btnDelete').style.display = 'block';
+            loadKaryaData();
+        }
+    }
+
+    async function loadKaryaData() {
+        const { data } = await _supabase.from('tulisan').select('*').eq('id', karyaId).single();
+        if (data) {
+            document.getElementById('judulInput').value = data.judul;
+            if (data.cover) {
+                currentCoverBase64 = data.cover;
+                document.getElementById('coverBox').style.backgroundImage = `url('${data.cover}')`;
+                document.getElementById('coverBox').querySelector('span').style.display = 'none';
+            }
+            setTimeout(() => tinymce.get('editorContent').setContent(data.isi), 500);
+        }
+    }
+
+    document.getElementById('coverInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                currentCoverBase64 = event.target.result;
+                document.getElementById('coverBox').style.backgroundImage = `url('${currentCoverBase64}')`;
+                document.getElementById('coverBox').querySelector('span').style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    document.getElementById('docxInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                mammoth.convertToHtml({ arrayBuffer: event.target.result })
+                    .then(result => tinymce.get('editorContent').setContent(result.value));
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    });
+
+    document.getElementById('btnSave').addEventListener('click', async function() {
+        if (!currentUser) return alert("Silakan login terlebih dahulu.");
+        const judul = document.getElementById('judulInput').value.trim() || "Tanpa Judul";
+        const isi = tinymce.get('editorContent').getContent();
+
+        const payload = {
+            user_id: currentUser.id,
+            judul: judul,
+            tanggal: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase(),
+            cover: currentCoverBase64,
+            isi: isi
+        };
+
+        let response;
+        if (mode === 'edit' && karyaId) {
+            response = await _supabase.from('tulisan').update(payload).eq('id', karyaId);
+        } else {
+            response = await _supabase.from('tulisan').insert([payload]);
+        }
+
+        if (response.error) alert("Gagal menyimpan: " + response.error.message);
+        else { alert("Karya berhasil disimpan!"); window.location.href = 'home.html'; }
+    });
+
+    document.getElementById('btnDelete').addEventListener('click', async function() {
+        if (confirm("Yakin ingin menghapus karya ini?")) {
+            await _supabase.from('tulisan').delete().eq('id', karyaId);
+            alert("Karya telah dihapus."); window.location.href = 'home.html';
+        }
+    });
+
+    init();
+</script>
+</body>
+</html>

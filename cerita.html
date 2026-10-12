@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>serayacerita - Baca Karya</title>
+    <link href="https://fonts.googleapis.com/css2?family=Berkshire+Swash&family=Plus+Jakarta+Sans:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: #2a160a;
+            background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png');
+            background-repeat: repeat;
+            color: #fff8eb;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh; padding: 20px 15px; display: flex; justify-content: center;
+        }
+        .container { width: 100%; max-width: 480px; display: flex; flex-direction: column; align-items: center; }
+        .btn-back { align-self: flex-start; color: #d4b896; text-decoration: none; font-size: 0.85rem; margin-bottom: 15px; }
+        .site-title {
+            font-family: 'Berkshire Swash', cursive; font-size: 2.2rem; color: #fff8eb; margin-bottom: 20px; text-transform: lowercase;
+        }
+
+        .author-profile {
+            width: 100%; display: flex; align-items: center; gap: 15px; margin-bottom: 20px;
+            cursor: pointer; padding: 8px 12px; border-radius: 30px; background: rgba(43, 24, 16, 0.8);
+            border: 1px solid #5c3517; transition: background 0.2s;
+        }
+        .author-profile:hover { background: rgba(89, 49, 32, 0.9); }
+        .avatar {
+            width: 50px; height: 50px; border-radius: 50%; background: #5c3517; border: 2px solid #fff8eb;
+            background-size: cover; background-position: center; display: flex; justify-content: center; align-items: center; color: #fff8eb; font-size: 0.7rem;
+        }
+        .author-name { font-size: 1.1rem; font-weight: 600; color: #fff8eb; }
+
+        .title-capsule {
+            width: 100%; padding: 12px; border-radius: 25px; border: 1px solid #784822;
+            background: rgba(43, 24, 16, 0.9); text-align: center; margin-bottom: 20px;
+        }
+        .title-text { font-size: 1rem; font-weight: 700; color: #fff8eb; text-transform: uppercase; }
+
+        .reading-sheet {
+            width: 100%; background-color: #fff8eb; color: #2b1810;
+            border-radius: 16px; padding: 30px 22px; min-height: 500px;
+            font-family: 'Lora', serif; line-height: 1.8; font-size: 1.05rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+        }
+        .reading-sheet p { margin-bottom: 1.2em; text-align: justify; }
+        .reading-sheet strong { color: #1a0f0a; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="home.html" class="btn-back">← Kembali</a>
+        <h1 class="site-title">serayacerita</h1>
+
+        <div class="author-profile" id="authorBox" title="Klik untuk lihat semua karya penulis ini">
+            <div class="avatar" id="authorAvatar">foto</div>
+            <h2 class="author-name" id="authorNameDisplay">penulis</h2>
+        </div>
+
+        <div class="title-capsule"><h3 class="title-text" id="karyaTitleDisplay">JUDUL KARYA</h3></div>
+
+        <main class="reading-sheet" id="karyaContentDisplay"></main>
+    </div>
+
+    <script>
+    // URL ebong Key Supabase Project Baru (serayacerita)
+    const SUPABASE_URL = "https://dtxzmilzgoengvthyhuk.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_e4Bo3GagYcYbKzW9giZHSg_9kupUSA4";
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const karyaId = urlParams.get('id');
+    let currentAuthorUserId = null;
+
+    async function loadCerita() {
+        if (karyaId) {
+            const { data: target } = await _supabase.from('tulisan').select('*').eq('id', karyaId).single();
+
+            if (target) {
+                document.getElementById('karyaTitleDisplay').innerText = target.judul;
+                document.getElementById('karyaContentDisplay').innerHTML = target.isi;
+                currentAuthorUserId = target.user_id;
+
+                if (target.user_id) {
+                    const { data: author } = await _supabase.from('profil').select('*').eq('user_id', target.user_id).maybeSingle();
+                    if (author) {
+                        document.getElementById('authorNameDisplay').innerText = author.nama;
+                        if (author.foto) {
+                            document.getElementById('authorAvatar').style.backgroundImage = `url('${author.foto}')`;
+                            document.getElementById('authorAvatar').innerText = '';
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    document.getElementById('authorBox').addEventListener('click', function() {
+        if (currentAuthorUserId) {
+            window.location.href = `home.html?author=${currentAuthorUserId}`;
+        }
+    });
+
+    loadCerita();
+</script>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>serayacerita - Beranda</title>
+    <link href="https://fonts.googleapis.com/css2?family=Berkshire+Swash&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: #2a160a;
+            background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png');
+            background-repeat: repeat;
+            color: #fff8eb;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh;
+            padding: 20px 15px;
+            position: relative;
+        }
+        header { text-align: center; margin-bottom: 30px; }
+        .site-title {
+            font-family: 'Berkshire Swash', cursive;
+            font-size: 2.8rem;
+            color: #fff8eb;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.9);
+            text-transform: lowercase;
+        }
+        .filter-info {
+            text-align: center; margin-bottom: 15px; font-size: 0.9rem; color: #d4b896; display: none;
+        }
+        .filter-info span { font-weight: bold; text-decoration: underline; color: #fff8eb; }
+        .btn-reset-filter {
+            background: none; border: none; color: #ff9999; cursor: pointer; margin-left: 10px; font-size: 0.85rem;
+        }
+
+        .content-grid {
+            max-width: 500px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+        }
+        .card {
+            text-decoration: none; color: inherit; display: block;
+            background: rgba(43, 24, 16, 0.8); border: 1px solid #5c3517; border-radius: 8px; padding: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .cover-area {
+            width: 100%; padding-top: 140%; border-radius: 6px;
+            background-size: cover; background-position: center; background-color: #3b2010; margin-bottom: 8px;
+        }
+        .karya-judul { font-size: 0.9rem; font-weight: 700; color: #fff8eb; }
+        .karya-tanggal { font-size: 0.75rem; color: #d4b896; margin-top: 2px; }
+
+        .admin-slider {
+            position: fixed; top: 12%; left: 0; width: 230px;
+            background: rgba(43, 24, 16, 0.95); border: 1px solid #784822; border-left: none;
+            border-radius: 0 20px 20px 0; padding: 20px 15px; display: flex; flex-direction: column; align-items: center;
+            box-shadow: 5px 5px 20px rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 100;
+        }
+        .profile-upload {
+            width: 80px; height: 80px; border-radius: 50%; background: #5c3517;
+            border: 2px solid #fff8eb; display: flex; justify-content: center; align-items: center;
+            color: #fff8eb; font-size: 0.75rem; cursor: pointer; margin-bottom: 10px;
+            overflow: hidden; background-size: cover; background-position: center;
+        }
+        .account-name-input {
+            width: 100%; padding: 8px; border-radius: 15px; border: 1px solid #784822;
+            background: #3b2010; color: #fff8eb; font-size: 0.85rem; text-align: center; margin-bottom: 10px; outline: none;
+        }
+        .btn-save-profile {
+            background: #2e6930; color: white; border: none; padding: 6px 12px;
+            font-size: 0.75rem; font-weight: 700; border-radius: 15px; cursor: pointer; margin-bottom: 15px;
+        }
+        .btn-karya-baru {
+            width: 100%; padding: 10px; border-radius: 20px; border: 1px solid #8c532b;
+            background: #784822; color: #fff8eb; font-weight: 700; text-decoration: none; text-align: center;
+        }
+        .btn-logout { margin-top: 30px; color: #d4b896; text-decoration: none; font-size: 0.8rem; display: block; text-align: center; }
+    </style>
+</head>
+<body>
+    <header><h1 class="site-title">serayacerita</h1></header>
+
+    <div class="filter-info" id="filterInfo">
+        Menampilkan karya dari: <span id="authorFilterName"></span>
+        <button class="btn-reset-filter" onclick="resetFilter()">[Tampilkan Semua]</button>
+    </div>
+
+    <aside id="adminSlider" class="admin-slider" style="display: none;">
+        <label for="uploadPhotoInput" class="profile-upload" id="profileBox">
+            <span id="profileText">foto</span>
+        </label>
+        <input type="file" id="uploadPhotoInput" accept="image/*" style="display: none;">
+        
+        <input type="text" id="accountNameInput" class="account-name-input" placeholder="nama penulis">
+        <button id="btnSaveProfile" class="btn-save-profile">💾 Simpan Profil</button>
+
+        <a href="form-karya.html?mode=add" class="btn-karya-baru">+ karya baru</a>
+    </aside>
+
+    <main class="content-grid" id="katalogGrid"></main>
+
+    <a href="index.html" class="btn-logout" onclick="localStorage.clear()">← Keluar</a>
+
+    <script>
+    // URL dan Key Supabase Project Baru (serayacerita)
+    const SUPABASE_URL = "https://dtxzmilzgoengvthyhuk.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_e4Bo3GagYcYbKzW9giZHSg_9kupUSA4";
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const isAdmin = localStorage.getItem('role') === 'admin';
+    let currentUser = null;
+    let tempPhotoBase64 = "";
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const filterAuthorId = urlParams.get('author');
+
+    async function init() {
+        const { data: { user } } = await _supabase.auth.getUser();
+        currentUser = user;
+
+        if (isAdmin && user) {
+            document.getElementById('adminSlider').style.display = 'flex';
+            loadMyProfile(user.id);
+        }
+
+        fetchKarya();
+    }
+
+    async function loadMyProfile(userId) {
+        const { data } = await _supabase.from('profil').select('*').eq('user_id', userId).maybeSingle();
+        if (data) {
+            document.getElementById('accountNameInput').value = data.nama || "";
+            if (data.foto) {
+                tempPhotoBase64 = data.foto;
+                document.getElementById('profileBox').style.backgroundImage = `url('${data.foto}')`;
+                document.getElementById('profileText').style.display = 'none';
+            }
+        }
+    }
+
+    document.getElementById('uploadPhotoInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                tempPhotoBase64 = event.target.result;
+                document.getElementById('profileBox').style.backgroundImage = `url('${tempPhotoBase64}')`;
+                document.getElementById('profileText').style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    document.getElementById('btnSaveProfile').addEventListener('click', async function() {
+        if (!currentUser) return alert("Silakan login terlebih dahulu.");
+        const namaBaru = document.getElementById('accountNameInput').value.trim() || "Penulis";
+
+        const { data: existing } = await _supabase.from('profil').select('id').eq('user_id', currentUser.id).maybeSingle();
+        const payload = { user_id: currentUser.id, nama: namaBaru, foto: tempPhotoBase64 };
+        if (existing) payload.id = existing.id;
+
+        const { error } = await _supabase.from('profil').upsert(payload);
+        if (error) alert("Gagal menyimpan profil: " + error.message);
+        else alert("Profil berhasil diperbarui!");
+    });
+
+    async function fetchKarya() {
+        let query = _supabase.from('tulisan').select('*').order('id', { ascending: false });
+
+        if (filterAuthorId) {
+            query = query.eq('user_id', filterAuthorId);
+            const { data: author } = await _supabase.from('profil').select('nama').eq('user_id', filterAuthorId).maybeSingle();
+            if (author) {
+                document.getElementById('authorFilterName').innerText = author.nama;
+                document.getElementById('filterInfo').style.display = 'block';
+            }
+        }
+
+        const { data: listKarya, error } = await query;
+        const grid = document.getElementById('katalogGrid');
+        grid.innerHTML = '';
+
+        if (error || !listKarya || listKarya.length === 0) {
+            grid.innerHTML = '<p style="grid-column: span 2; text-align: center; color: #d4b896; margin-top: 30px;">Belum ada karya yang diunggah.</p>';
+            return;
+        }
+
+        listKarya.forEach(item => {
+            const isMyOwn = currentUser && item.user_id === currentUser.id;
+            const linkTarget = (isAdmin && isMyOwn) ? `form-karya.html?mode=edit&id=${item.id}` : `cerita.html?id=${item.id}`;
+            const coverStyle = item.cover ? `style="background-image: url('${item.cover}');"` : '';
+
+            grid.innerHTML += `
+                <a href="${linkTarget}" class="card">
+                    <div class="cover-area" ${coverStyle}></div>
+                    <h2 class="karya-judul">${item.judul}</h2>
+                    <p class="karya-tanggal">${item.tanggal}</p>
+                </a>
+            `;
+        });
+    }
+
+    function resetFilter() { window.location.href = 'home.html'; }
+
+    init();
+</script>
+</body>
+</html>
