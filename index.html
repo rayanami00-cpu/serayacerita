@@ -112,13 +112,11 @@
     </div>
 
     <script>
-        // MASUKKAN URL DAN ANON KEY JWT SUPABASE (DARI MENU SETTINGS ⚙️ -> API)
         const SUPABASE_URL = "https://dtxzmilzgoengvthyhuk.supabase.co";
-        const SUPABASE_KEY = "sb_secret_3p6RaV2FIc4zKrzCCcaRxw_NKuHh9M0"; 
-
+        const SUPABASE_KEY = "sb_publishable_e4Bo3GagYcYbKzW9giZHSg_9kupUSA4";
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Fitur Toggle Intip Password
+        // Fitur Intip Password
         const togglePassword = document.getElementById('togglePassword');
         const passwordInput = document.getElementById('password');
 
@@ -139,18 +137,24 @@
             btn.disabled = true;
             btn.innerText = "memproses...";
 
-            const { data, error } = await _supabase.auth.signInWithPassword({
-                email: emailInput,
-                password: passwordInputVal
-            });
+            try {
+                const { data, error } = await _supabase.auth.signInWithPassword({
+                    email: emailInput,
+                    password: passwordInputVal
+                });
 
-            if (error) {
-                alert("Login gagal: " + error.message);
+                if (error) {
+                    alert("Login gagal: " + error.message);
+                    btn.disabled = false;
+                    btn.innerText = "login admin";
+                } else {
+                    localStorage.setItem('role', 'admin');
+                    window.location.href = "home.html";
+                }
+            } catch (err) {
+                alert("Koneksi terganggu. Pastikan jaringan stabil dan coba lagi.");
                 btn.disabled = false;
                 btn.innerText = "login admin";
-            } else {
-                localStorage.setItem('role', 'admin');
-                window.location.href = "home.html";
             }
         });
 
