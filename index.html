@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>serayacerita - Selamat Datang</title>
     <link href="https://fonts.googleapis.com/css2?family=Berkshire+Swash&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Supabase JS Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -110,8 +112,11 @@
     </div>
 
     <script>
+        // MASUKKAN URL DAN ANON KEY JWT SUPABASE (DARI MENU SETTINGS ⚙️ -> API)
         const SUPABASE_URL = "https://dtxzmilzgoengvthyhuk.supabase.co";
-        const SUPABASE_KEY = "sb_publishable_e4Bo3GagYcYbKzW9giZHSg_9kupUSA4";
+        const SUPABASE_KEY = "sb_secret_3p6RaV2FIc4zKrzCCcaRxw_NKuHh9M0"; 
+
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // Fitur Toggle Intip Password
         const togglePassword = document.getElementById('togglePassword');
@@ -123,7 +128,7 @@
             this.textContent = type === 'password' ? '👁️' : '🙈';
         });
 
-        // Logika Login Admin via Direct API Call
+        // Logika Login Admin
         document.getElementById('adminForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -134,35 +139,18 @@
             btn.disabled = true;
             btn.innerText = "memproses...";
 
-            try {
-                const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'apikey': SUPABASE_KEY
-                    },
-                    body: JSON.stringify({
-                        email: emailInput,
-                        password: passwordInputVal
-                    })
-                });
+            const { data, error } = await _supabase.auth.signInWithPassword({
+                email: emailInput,
+                password: passwordInputVal
+            });
 
-                const data = await response.json();
-
-                if (!response.ok) {
-                    alert("Login gagal: " + (data.error_description || data.msg || data.message || "Email atau password salah"));
-                    btn.disabled = false;
-                    btn.innerText = "login admin";
-                } else {
-                    localStorage.setItem('role', 'admin');
-                    localStorage.setItem('supabase_token', data.access_token);
-                    localStorage.setItem('user_id', data.user.id);
-                    window.location.href = "home.html";
-                }
-            } catch (err) {
-                alert("Terjadi kesalahan jaringan: " + err.message);
+            if (error) {
+                alert("Login gagal: " + error.message);
                 btn.disabled = false;
                 btn.innerText = "login admin";
+            } else {
+                localStorage.setItem('role', 'admin');
+                window.location.href = "home.html";
             }
         });
 
