@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>serayacerita - Selamat Datang</title>
     <link href="https://fonts.googleapis.com/css2?family=Berkshire+Swash&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- Supabase JS Library -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -114,7 +112,6 @@
     <script>
         const SUPABASE_URL = "https://dtxzmilzgoengvthyhuk.supabase.co";
         const SUPABASE_KEY = "sb_publishable_e4Bo3GagYcYbKzW9giZHSg_9kupUSA4";
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // Fitur Intip Password
         const togglePassword = document.getElementById('togglePassword');
@@ -126,7 +123,7 @@
             this.textContent = type === 'password' ? '👁️' : '🙈';
         });
 
-        // Logika Login Admin
+        // Logika Login Admin Menggunakan Direct REST API Call
         document.getElementById('adminForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -138,21 +135,35 @@
             btn.innerText = "memproses...";
 
             try {
-                const { data, error } = await _supabase.auth.signInWithPassword({
-                    email: emailInput,
-                    password: passwordInputVal
+                const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    },
+                    body: JSON.stringify({
+                        email: emailInput,
+                        password: passwordInputVal
+                    })
                 });
 
-                if (error) {
-                    alert("Login gagal: " + error.message);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    alert("Login gagal: " + (data.error_description || data.msg || data.message || "Email atau password salah"));
                     btn.disabled = false;
                     btn.innerText = "login admin";
                 } else {
                     localStorage.setItem('role', 'admin');
+                    localStorage.setItem('supabase_token', data.access_token);
+                    if (data.user) {
+                        localStorage.setItem('user_id', data.user.id);
+                    }
                     window.location.href = "home.html";
                 }
             } catch (err) {
-                alert("Koneksi terganggu. Pastikan jaringan stabil dan coba lagi.");
+                alert("Gagal terhubung ke Supabase. Periksa koneksi atau URL kamu.");
                 btn.disabled = false;
                 btn.innerText = "login admin";
             }
